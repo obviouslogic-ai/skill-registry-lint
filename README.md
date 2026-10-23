@@ -1,31 +1,42 @@
 # skill-registry-lint
 
-A small linter for a library of agent skills. Docs and skills point at other skills with `[[skill:name]]`. When a skill is renamed or removed, those pointers quietly break, and an agent ends up following instructions that lead nowhere. This tool finds them before that happens.
+A linter that checks every `[[skill:name]]` reference and alias in a skill library resolves to a real skill.
 
-## What it checks
+**This is a scripted demo.** It represents the governance process I use in Palladium, my own agent framework. It is not a sample or excerpt of that system, and no Palladium code or data is in it.
 
-- Every `[[skill:name]]` in any Markdown file resolves to `skills/<name>/SKILL.md`, directly or through an alias.
-- Every alias in `registry.json` ends at a real skill (no dead ends, no cycles).
-- No alias has the same name as a real skill.
+- Live page: https://demos.obviouslogic.ai/skill-registry-lint/
+- Source: https://github.com/obviouslogic-ai/skill-registry-lint
 
-It exits with code 1 when anything is wrong, so it can run in CI or a pre-commit hook.
+## How it fits Palladium governance
 
-## Run it
+Palladium agents work from a shared library of skills, and renamed skills keep aliases. A reference that points nowhere fails quietly, so the library gets linted. This repo acts that out on a tiny `example/` library.
 
+## Run the CLI
+
+```sh
+python3 lint.py example   # lists broken references, exits 1 if any
 ```
-python3 lint.py example
+
+Standard library only, no installs.
+
+## Run the page locally
+
+```sh
+cd web && ./get-pyodide.sh && cd ..   # once: downloads Pyodide 0.27.7 into web/vendor (gitignored)
+python3 -m http.server 8000   # from the folder that holds this repo
+# open http://localhost:8000/skill-registry-lint/web/
 ```
 
-The example has one dead alias and one reference to a skill that does not exist.
+The graph shows files, references and skills. Broken links are red and dashed. Add the missing skill, fix the alias, or delete a skill to break things again.
 
-## Test it
+The page runs this repo's real Python in the browser through Pyodide, so what you click is the same code the tests cover. Styling comes from `web/kit/`, shared across all five demos.
 
-```
+## Tests
+
+```sh
 python3 -m unittest -v
 ```
 
-Python 3.10+, standard library only.
+## License
 
-## Demo
-
-Terminal recording: `demo.cast` (play with `asciinema play demo.cast`).
+MIT

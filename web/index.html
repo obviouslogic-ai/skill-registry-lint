@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skill lint · ObviousLogic demos</title><link rel="stylesheet" href="kit/kit.css">
+<style>
+svg{width:100%;height:auto;display:block}svg text{font:12px var(--mono);fill:var(--fg)}svg text.col{fill:var(--dim);letter-spacing:.16em}
+svg path{fill:none;stroke:#F4F4F255;stroke-width:1.2;transition:stroke .6s}svg path.bad{stroke:var(--bad);stroke-width:2;stroke-dasharray:5 4}
+svg circle{fill:var(--fg);transition:fill .6s}svg circle.bad{fill:var(--bad)}svg circle.alias{fill:var(--accent)}svg text.bad{fill:var(--bad)}
+#problems div{font:14px/1.9 var(--mono);color:var(--bad)}
+</style></head><body>
+<section class="screen in"><div class="tele" data-kit-tele></div>
+<h1>Every playbook an agent is told to use has to exist.</h1>
+<p class="lede">Palladium agents work from a shared library of skills, and renamed skills keep aliases. A reference that points nowhere fails quietly, so the library is linted. This page runs the real <code>lint.py</code> on the repo's <code>example/</code> folder.</p>
+<p data-kit-note></p></section>
+<section class="screen"><div class="tele">REFERENCE GRAPH / <b>FILES → REFERENCES → SKILLS</b> &nbsp; PROBLEMS <b id="pcount">-</b></div>
+<svg id="g" viewBox="0 0 1000 420"></svg>
+<div><button id="add" class="go">Add skill publish</button><button id="del" class="danger">Delete skill summarize</button><button id="fix" class="go">Point old-report at file-report</button><button id="reset">Reset</button></div>
+<span class="verdict" id="verdict"></span><div id="problems"></div></section>
+<script src="vendor/pyodide.js"></script>
+<script type="module">
+import { mount, setStatus } from "./kit/kit.js"; import { loadPy } from "./kit/py.js";
+mount("skill-registry-lint", { status: "LOADING PYTHON" });
+const $ = id => document.getElementById(id);
+const FILES = ["docs/onboarding.md", "skills/summarize/SKILL.md", "skills/file-report/SKILL.md", "registry.json"];
+const src = Object.fromEntries(FILES.map(f => ["ex/" + f, "../example/" + f]));
+const py = await loadPy({ "lint.py": "../lint.py", ...src });
+py.runPython(`import json, shutil, lint
+from pathlib import Path
+ROOT = Path("/home/pyodide/ex"); ORIG = {p: (ROOT / p).read_text() for p in ${JSON.stringify(FILES)}}
+def reset():
+    shutil.rmtree(ROOT); [((ROOT / p).parent.mkdir(parents=True, exist_ok=True), (ROOT / p).write_text(t)) for p, t in ORIG.items()]
+def graph():
+    skills, aliases = lint.load(ROOT); edges = []
+    for md in sorted(ROOT.rglob("*.md")):
+        for name in lint.REF.findall(md.read_text()):
+            edges.append([str(md.relative_to(ROOT)), name, lint.resolve(name, skills, aliases)])
+    for a, t in aliases.items(): edges.append(["registry.json", a, lint.resolve(a, skills, aliases)])
+    return json.dumps({"skills": sorted(skills), "aliases": aliases, "edges": edges, "problems": lint.lint(ROOT)})`);
+function render() {
+  const g = JSON.parse(py.runPython("graph()")), X = [150, 500, 850];
+  const files = [...new Set(g.edges.map(e => e[0]))], refs = [...new Set(g.edges.map(e => e[1]))];
+  const targets = [...new Set([...g.skills, ...g.edges.filter(e => !e[2]).map(e => "?" + e[1])])];
+  const y = (arr, v) => 70 + (arr.indexOf(v) + 0.5) * (330 / arr.length), node = (x, yy, t, cls = "", anchor = "middle") => `<circle cx="${x}" cy="${yy}" r="5" class="${cls}"/><text x="${x}" y="${yy - 12}" text-anchor="${anchor}" class="${cls}">${t}</text>`;
+  const curve = (x1, y1, x2, y2, cls) => `<path class="${cls}" d="M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}"/>`;
+  let s = ["FILES", "REFERENCES", "SKILLS"].map((t, i) => `<text class="col" x="${X[i]}" y="30" text-anchor="middle">${t}</text>`).join("");
+  for (const [f, r, res] of g.edges) { s += curve(X[0], y(files, f), X[1], y(refs, r), res ? "" : "bad"); s += curve(X[1], y(refs, r), X[2], y(targets, res || "?" + r), res ? "" : "bad"); }
+  s += files.map(f => node(X[0], y(files, f), f)).join("") + refs.map(r => { const bad = g.edges.some(e => e[1] === r && !e[2]); return node(X[1], y(refs, r), r + (g.aliases[r] ? " → " + g.aliases[r] : ""), bad ? "bad" : g.aliases[r] ? "alias" : ""); }).join("");
+  s += targets.map(t => node(X[2], y(targets, t), t.startsWith("?") ? "missing: " + t.slice(1) : t, t.startsWith("?") ? "bad" : "")).join("");
+  $("g").innerHTML = s; $("pcount").textContent = g.problems.length;
+  $("problems").innerHTML = g.problems.map(p => `<div>${p}</div>`).join("");
+  $("verdict").textContent = g.problems.length ? `lint(): ${g.problems.length} problem(s)` : "lint(): ok"; $("verdict").className = "verdict " + (g.problems.length ? "badc" : "okc");
+  document.body.dataset.problems = g.problems.length;
+}
+$("add").onclick = () => { py.runPython('(ROOT/"skills/publish").mkdir(parents=True, exist_ok=True); (ROOT/"skills/publish/SKILL.md").write_text("# publish\\nShip it.\\n")'); render(); };
+$("del").onclick = () => { py.runPython('shutil.rmtree(ROOT/"skills/summarize", ignore_errors=True)'); render(); };
+$("fix").onclick = () => { py.runPython('r = json.loads((ROOT/"registry.json").read_text()); r["aliases"]["old-report"] = "file-report"; (ROOT/"registry.json").write_text(json.dumps(r))'); render(); };
+$("reset").onclick = () => { py.runPython("reset()"); render(); };
+setStatus("READY"); render(); document.body.dataset.ready = "1";
+</script></body></html>
