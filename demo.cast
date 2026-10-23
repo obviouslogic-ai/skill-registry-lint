@@ -1,0 +1,10 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1792796482, "env": {"SHELL": null, "TERM": "dumb"}}
+[0.003539, "o", "$ python3 lint.py example\r\n"]
+[0.020869, "o", "registry.json: alias 'old-report' -> 'report-v2' does not resolve\r\ndocs/onboarding.md:4: unknown skill 'publish'\r\n2 problem(s)\r\n"]
+[0.023532, "o", "\r\n$ python3 -m unittest\r\n"]
+[0.058267, "o", "."]
+[0.059647, "o", "."]
+[0.059786, "o", "."]
+[0.060394, "o", "."]
+[0.060766, "o", "."]
+[0.060797, "o", ".\r\n----------------------------------------------------------------------\r\nRan 6 tests in 0.004s\r\n\r\nOK\r\n"]
