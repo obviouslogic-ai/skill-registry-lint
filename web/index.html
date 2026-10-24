@@ -10,10 +10,15 @@ svg path{transition:stroke-dashoffset .5s ease,stroke .6s}
 .work{display:grid;grid-template-columns:2fr 1fr;gap:3vw}.work>div{min-height:0;overflow:hidden}
 svg{height:100%;max-height:100%}
 #feed div{font:13px/1.7 var(--mono);opacity:0;transition:opacity .4s}#feed div.in{opacity:1}
+
+.work>div:first-child{display:flex;flex-direction:column}.work>div:first-child svg{flex:1 1 0;min-height:0;height:auto}
+#feed div{font-size:.82em}#problems div{font-size:.88em}
+@media (max-width:600px),(orientation:portrait){.work{grid-template-columns:1fr;grid-template-rows:minmax(0,1.3fr) minmax(0,1fr);gap:2vh}}
+
 </style></head><body class="stage">
 <main class="stage-main">
 <div><div class="tele" data-kit-tele></div><h1>Every playbook an agent is told to use has to exist</h1></div>
-<div class="work">
+<div class="work" data-fit>
  <div><div class="tele">REFERENCE GRAPH / <b>FILES → REFERENCES → SKILLS</b> &nbsp; PROBLEMS <b id="pcount">-</b></div><svg id="g" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMin meet"></svg></div>
  <div><div class="tele">LINT RUN / <b id="phase">IDLE</b></div><div id="feed"></div><div id="problems" hidden></div></div>
 </div>
@@ -22,7 +27,7 @@ svg{height:100%;max-height:100%}
 <template id="info"><p>Palladium agents work from a shared library of skills, and renamed skills keep aliases. A reference that points nowhere fails quietly, so the library is linted.</p><p>This page runs the real <code>lint.py</code> on the repo's <code>example/</code> folder in your browser. It finds two broken references, applies two scripted fixes and lints again.</p></template>
 <script src="vendor/pyodide.js"></script>
 <script type="module">
-import { mount, setStatus, sleep } from "./kit/kit.js"; import { loadPy } from "./kit/py.js";
+import { mount, setStatus, sleep, autoFit } from "./kit/kit.js"; import { loadPy } from "./kit/py.js";
 mount("skill-registry-lint", { status: "LOADING PYTHON" });
 const $ = id => document.getElementById(id);
 const FILES = ["docs/onboarding.md", "skills/summarize/SKILL.md", "skills/file-report/SKILL.md", "registry.json"];
@@ -73,5 +78,5 @@ async function run() {
   $("verdict").textContent = g.problems.length ? `lint(): ${g.problems.length} problem(s)` : "2 broken references found and fixed. lint(): ok"; $("verdict").className = "verdict " + (g.problems.length ? "badc" : "okc");
   setStatus("DONE"); $("go").textContent = "Replay"; $("go").disabled = false; document.body.dataset.done = "1";
 }
-$("go").onclick = run; render(); $("go").disabled = false; setStatus("READY"); document.body.dataset.ready = "1";
+$("go").onclick = run; render(); $("go").disabled = false; setStatus("READY"); autoFit(); document.body.dataset.ready = "1";
 </script></body></html>
