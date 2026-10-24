@@ -1,43 +1,65 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Skill lint · ObviousLogic demos</title><link rel="stylesheet" href="kit/kit.css">
 <style>
-svg{width:100%;height:auto;display:block}svg text{font:12px var(--mono);fill:var(--fg)}svg text.col{fill:var(--dim);letter-spacing:.16em}
-svg path{fill:none;stroke:#F4F4F255;stroke-width:1.2;transition:stroke .6s}svg path.bad{stroke:var(--bad);stroke-width:2;stroke-dasharray:5 4}
-svg circle{fill:var(--fg);transition:fill .6s}svg circle.bad{fill:var(--bad)}svg circle.alias{fill:var(--accent)}svg text.bad{fill:var(--bad)}
-#problems div{font:14px/1.9 var(--mono);color:var(--bad)}
-
-svg path{transition:stroke-dashoffset .5s ease,stroke .6s}
-.work{display:grid;grid-template-columns:2fr 1fr;gap:3vw}.work>div{min-height:0;overflow:hidden}
-svg{height:100%;max-height:100%}
-#feed div{font:13px/1.7 var(--mono);opacity:0;transition:opacity .4s}#feed div.in{opacity:1}
-
-.work>div:first-child{display:flex;flex-direction:column}.work>div:first-child svg{flex:1 1 0;min-height:0;height:auto}
-#feed div{font-size:.82em}#problems div{font-size:.88em}
-@media (max-width:600px),(orientation:portrait){.work{grid-template-columns:1fr;grid-template-rows:minmax(0,1.3fr) minmax(0,1fr);gap:2vh}}
-
+.work{font-size:calc(1.3em * var(--k,1));display:grid;grid-template-columns:1fr 1.15fr;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"before after" "cost after";gap:1.6dvh 3vw}
+.work>div{min-height:0;min-width:0;overflow:hidden}.work .tele{font-size:.62em;margin-bottom:.35em}
+#bef{grid-area:before}#aft{grid-area:after;display:flex;flex-direction:column}#costc{grid-area:cost}
+.trace{font:.72em/1.55 var(--mono);min-height:6.5em}.trace div{opacity:0;transition:opacity .3s}.trace div.in{opacity:1}
+.trace .x{color:var(--bad)}.trace .y{color:var(--ok)}.trace .d{color:var(--dim)}
+.tape{display:flex;flex-wrap:wrap;gap:3px;margin:.4em 0;align-content:flex-start}
+.tape i{width:.55em;height:.55em;background:var(--faint);transition:background .3s}.tape i.lie{background:var(--ok);box-shadow:inset 0 -.2em 0 var(--bad)}.tape i.ok{background:var(--ok)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.2em 1em;font:.68em var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.stats b{display:block;font:600 1.9em Barlow,sans-serif;color:var(--fg);letter-spacing:.04em}.stats .x b{color:var(--bad)}.stats .y b{color:var(--ok)}
+svg{width:100%;flex:1 1 0;min-height:0;display:block}svg text{font:12px var(--mono);fill:var(--fg)}svg text.col{fill:var(--dim);letter-spacing:.16em}
+svg path{fill:none;stroke:#F4F4F255;stroke-width:1.2;transition:stroke-dashoffset .5s ease,stroke .6s}svg path.bad{stroke:var(--bad);stroke-width:2}
+svg circle{fill:var(--fg)}svg circle.bad{fill:var(--bad)}svg circle.alias{fill:var(--accent)}svg text.bad{fill:var(--bad)}
+#feed{font:.68em/1.5 var(--mono);min-height:4.5em}#feed div{opacity:0;transition:opacity .3s}#feed div.in{opacity:1}
+@media (max-width:760px),(orientation:portrait){
+ .work{font-size:calc(1.05em * var(--k,1));grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"before" "after" "cost";gap:1.2dvh}
+ .trace{min-height:0}.why{font-size:12px}#aft svg{min-height:7em}}
+@media (max-height:560px){.why{display:none}.work{grid-template-columns:1fr 1.1fr 1fr;grid-template-rows:minmax(0,1fr);grid-template-areas:"before after cost"}}
 </style></head><body class="stage">
 <main class="stage-main">
-<div><div class="tele" data-kit-tele></div><h1>Every playbook an agent is told to use has to exist</h1></div>
+<div><div class="tele" data-kit-tele></div><h1>Every skill a playbook calls has to exist</h1>
+<p class="why"><b>WHY I BUILT THIS.</b> Agents follow playbooks that call skills by name. When a skill is renamed or never written, the agent does not crash. It skips the step, finishes, and reports success, run after run, until someone downstream notices. One lint pass before a playbook ships turns weeks of silent failures into one red line.</p></div>
 <div class="work" data-fit>
- <div><div class="tele">REFERENCE GRAPH / <b>FILES → REFERENCES → SKILLS</b> &nbsp; PROBLEMS <b id="pcount">-</b></div><svg id="g" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMin meet"></svg></div>
- <div><div class="tele">LINT RUN / <b id="phase">IDLE</b></div><div id="feed"></div><div id="problems" hidden></div></div>
+ <div id="bef"><div class="tele" style="color:var(--bad)">BEFORE / <b>NO LINT</b>, PLAYBOOK docs/onboarding.md</div>
+  <div class="trace" id="tA"></div><div class="tape" id="tapeA"></div>
+  <div class="stats"><span class="y">Reported success<b id="sOk">0</b></span><span class="x">Actually complete<b id="sDone">0</b></span><span class="x">Silent failures<b id="sBad">0</b></span></div></div>
+ <div id="aft"><div class="tele" style="color:var(--ok)">AFTER / <b>LINT BEFORE IT SHIPS</b> / <span id="phase">IDLE</span> PROBLEMS <b id="pcount">-</b></div>
+  <svg id="g" viewBox="0 0 1000 360" preserveAspectRatio="xMidYMid meet"></svg><div id="feed"></div><div class="tape" id="tapeB"></div></div>
+ <div id="costc"><div class="tele">THE COST / <span class="illus">ILLUSTRATIVE, EDIT THE NUMBERS</span></div><div id="calc"></div>
+  <div class="cost"><span class="lab">No lint</span><span class="bar bad"><i id="bA"></i></span><span class="v" id="vA">-</span><span class="lab">Lint first</span><span class="bar ok"><i id="bB"></i></span><span class="v" id="vB">-</span></div>
+  <div class="math" id="math"></div></div>
 </div>
-<div class="act"><button class="big" id="go" disabled>Run the lint</button><span class="verdict" id="verdict"></span></div>
+<div class="act"><button class="big" id="go" disabled>Run it both ways</button><span class="verdict" id="verdict"></span></div>
 </main>
-<template id="info"><p>Palladium agents work from a shared library of skills, and renamed skills keep aliases. A reference that points nowhere fails quietly, so the library is linted.</p><p>This page runs the real <code>lint.py</code> on the repo's <code>example/</code> folder in your browser. It finds two broken references, applies two scripted fixes and lints again.</p></template>
+<template id="info"><p>My agents work from a shared library of skills, and renamed skills keep aliases. A reference that points nowhere fails quietly, so every playbook is linted before it ships.</p><p>This page runs the real <code>lint.py</code> on the repo's <code>example/</code> folder in your browser. The "before" side walks the onboarding playbook with the same <code>resolve()</code> the lint uses and shows what an agent that skips unknown skills would report. The "after" side lints, applies two scripted fixes and lints again. The cost panel is an illustrative model: every number is an input you can change, and the formula is shown under the bars.</p></template>
 <script src="vendor/pyodide.js"></script>
 <script type="module">
-import { mount, setStatus, sleep, autoFit } from "./kit/kit.js"; import { loadPy } from "./kit/py.js";
+import { mount, setStatus, sleep, autoFit, calc, usd } from "./kit/kit.js"; import { loadPy } from "./kit/py.js";
 mount("skill-registry-lint", { status: "LOADING PYTHON" });
 const $ = id => document.getElementById(id);
+const FIELDS = [{ id: "runs", label: "Playbook runs a week", value: 25 }, { id: "weeks", label: "Weeks before anyone notices", value: 6 },
+ { id: "redo", label: "Minutes to redo one run", value: 30 }, { id: "rate", label: "$ an hour", value: 75 }, { id: "fix", label: "Minutes to fix once flagged", value: 15 }];
+let failShare = 1;
+function cost(v) {
+  const silent = Math.round(v.runs * v.weeks * failShare), A = silent * v.redo / 60 * v.rate, B = v.fix / 60 * v.rate, m = Math.max(A, B, 1);
+  $("bA").style.width = (A / m * 100) + "%"; $("bB").style.width = (B / m * 100) + "%"; $("vA").textContent = usd(A); $("vB").textContent = usd(B);
+  $("math").innerHTML = `No lint: <b>${v.runs}</b> runs x <b>${v.weeks}</b> weeks = <b>${silent}</b> silent failures x <b>${v.redo}</b> min x <b>${usd(v.rate)}</b>/h = <b>${usd(A)}</b>, before any customer impact. Lint first: one fix, <b>${v.fix}</b> min = <b>${usd(B)}</b>.`;
+  document.body.dataset.saving = Math.round(A - B); return silent;
+}
+const read = calc($("calc"), FIELDS, cost); cost(read());
 const FILES = ["docs/onboarding.md", "skills/summarize/SKILL.md", "skills/file-report/SKILL.md", "registry.json"];
-const src = Object.fromEntries(FILES.map(f => ["ex/" + f, "../example/" + f]));
-const py = await loadPy({ "lint.py": "../lint.py", ...src });
+const py = await loadPy({ "lint.py": "../lint.py", ...Object.fromEntries(FILES.map(f => ["ex/" + f, "../example/" + f])) });
 py.runPython(`import json, shutil, lint
 from pathlib import Path
 ROOT = Path("/home/pyodide/ex"); ORIG = {p: (ROOT / p).read_text() for p in ${JSON.stringify(FILES)}}
 def reset():
     shutil.rmtree(ROOT); [((ROOT / p).parent.mkdir(parents=True, exist_ok=True), (ROOT / p).write_text(t)) for p, t in ORIG.items()]
+def walk(path):
+    skills, aliases = lint.load(ROOT)
+    return json.dumps([[n, lint.resolve(n, skills, aliases)] for n in lint.REF.findall((ROOT / path).read_text())])
 def graph():
     skills, aliases = lint.load(ROOT); edges = []
     for md in sorted(ROOT.rglob("*.md")):
@@ -46,37 +68,54 @@ def graph():
     for a, t in aliases.items(): edges.append(["registry.json", a, lint.resolve(a, skills, aliases)])
     return json.dumps({"skills": sorted(skills), "aliases": aliases, "edges": edges, "problems": lint.lint(ROOT)})`);
 function render() {
-  const g = JSON.parse(py.runPython("graph()")), X = [150, 500, 850];
+  const g = JSON.parse(py.runPython("graph()")), X = [120, 500, 860];
   const files = [...new Set(g.edges.map(e => e[0]))], refs = [...new Set(g.edges.map(e => e[1]))];
   const targets = [...new Set([...g.skills, ...g.edges.filter(e => !e[2]).map(e => "?" + e[1])])];
-  const y = (arr, v) => 70 + (arr.indexOf(v) + 0.5) * (330 / arr.length), node = (x, yy, t, cls = "", anchor = "middle") => `<circle cx="${x}" cy="${yy}" r="5" class="${cls}"/><text x="${x}" y="${yy - 12}" text-anchor="${anchor}" class="${cls}">${t}</text>`;
+  const y = (arr, v) => 50 + (arr.indexOf(v) + 0.5) * (300 / arr.length), node = (x, yy, t, cls = "") => `<circle cx="${x}" cy="${yy}" r="6" class="${cls}"/><text x="${x}" y="${yy - 13}" text-anchor="middle" class="${cls}">${t}</text>`;
   const curve = (x1, y1, x2, y2, cls) => `<path class="${cls}" d="M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}"/>`;
-  let s = ["FILES", "REFERENCES", "SKILLS"].map((t, i) => `<text class="col" x="${X[i]}" y="30" text-anchor="middle">${t}</text>`).join("");
+  let s = ["FILES", "REFERENCES", "SKILLS"].map((t, i) => `<text class="col" x="${X[i]}" y="20" text-anchor="middle">${t}</text>`).join("");
   for (const [f, r, res] of g.edges) { s += curve(X[0], y(files, f), X[1], y(refs, r), res ? "" : "bad"); s += curve(X[1], y(refs, r), X[2], y(targets, res || "?" + r), res ? "" : "bad"); }
-  s += files.map(f => node(X[0], y(files, f), f)).join("") + refs.map(r => { const bad = g.edges.some(e => e[1] === r && !e[2]); return node(X[1], y(refs, r), r + (g.aliases[r] ? " → " + g.aliases[r] : ""), bad ? "bad" : g.aliases[r] ? "alias" : ""); }).join("");
+  s += files.map(f => node(X[0], y(files, f), f)).join("") + refs.map(r => { const bad = g.edges.some(e => e[1] === r && !e[2]); return node(X[1], y(refs, r), r + (g.aliases[r] ? " > " + g.aliases[r] : ""), bad ? "bad" : g.aliases[r] ? "alias" : ""); }).join("");
   s += targets.map(t => node(X[2], y(targets, t), t.startsWith("?") ? "missing: " + t.slice(1) : t, t.startsWith("?") ? "bad" : "")).join("");
   $("g").innerHTML = s; $("pcount").textContent = g.problems.length; document.body.dataset.problems = g.problems.length; return g;
 }
-const line = async (t, c = "") => { const d = document.createElement("div"); d.textContent = t; d.style.color = c; $("feed").append(d); await sleep(40); d.classList.add("in"); await sleep(650); };
 async function draw() {
   const g = render(), ps = [...$("g").querySelectorAll("path")];
   ps.forEach(p => { const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L; });
-  for (let i = 0; i < ps.length; i += 2) { await sleep(260); [ps[i], ps[i + 1]].forEach(p => p && (p.style.strokeDashoffset = 0)); }
-  await sleep(400); ps.forEach(p => p.style.strokeDasharray = p.classList.contains("bad") ? "5 4" : "none"); return g;
+  for (let i = 0; i < ps.length; i += 2) { await sleep(200); [ps[i], ps[i + 1]].forEach(p => p && (p.style.strokeDashoffset = 0)); }
+  await sleep(300); ps.forEach(p => p.style.strokeDasharray = p.classList.contains("bad") ? "5 4" : "none"); return g;
+}
+const add = async (el, html, cls = "", wait = 420) => { const d = document.createElement("div"); d.innerHTML = html; d.className = cls; el.append(d); await sleep(30); d.classList.add("in"); await sleep(wait); };
+async function tape(el, n, cls, stats) {
+  el.innerHTML = Array.from({ length: n }, () => "<i></i>").join(""); const cells = [...el.children], step = Math.max(1, Math.ceil(n / 30));
+  for (let i = 0; i < n; i += step) { await sleep(70); cells.slice(i, i + step).forEach(c => c.className = cls); stats && stats(Math.min(n, i + step)); }
 }
 async function run() {
-  $("go").disabled = true; delete document.body.dataset.done; py.runPython("reset()"); $("feed").innerHTML = ""; $("verdict").textContent = "";
-  setStatus("LINTING"); $("phase").textContent = "PASS 1"; await line("lint(example/)", "var(--accent)");
-  let g = await draw();
-  for (const p of g.problems) await line("FAIL " + p, "var(--bad)");
-  await line(`${g.problems.length} problem(s)`, "var(--bad)"); $("verdict").textContent = `lint(): ${g.problems.length} problem(s)`; $("verdict").className = "verdict badc"; await sleep(900);
-  setStatus("FIXING"); $("phase").textContent = "FIX";
-  await line("fix: add skills/publish/SKILL.md", "var(--dim)"); py.runPython('(ROOT/"skills/publish").mkdir(parents=True, exist_ok=True); (ROOT/"skills/publish/SKILL.md").write_text("# publish\\nShip it.\\n")');
-  await line("fix: alias old-report → file-report", "var(--dim)"); py.runPython('r = json.loads((ROOT/"registry.json").read_text()); r["aliases"]["old-report"] = "file-report"; (ROOT/"registry.json").write_text(json.dumps(r))');
-  setStatus("LINTING"); $("phase").textContent = "PASS 2"; await line("lint(example/)", "var(--accent)"); g = await draw();
-  await line(g.problems.length ? `${g.problems.length} problem(s)` : "ok, every reference resolves", g.problems.length ? "var(--bad)" : "var(--ok)");
-  $("verdict").textContent = g.problems.length ? `lint(): ${g.problems.length} problem(s)` : "2 broken references found and fixed. lint(): ok"; $("verdict").className = "verdict " + (g.problems.length ? "badc" : "okc");
+  $("go").disabled = true; delete document.body.dataset.done; py.runPython("reset()"); render(); $("g").innerHTML = "";
+  ["tA", "feed", "tapeA", "tapeB"].forEach(i => $(i).innerHTML = ""); ["sOk", "sDone", "sBad"].forEach(i => $(i).textContent = "0"); $("verdict").textContent = ""; $("pcount").textContent = "-";
+  setStatus("BEFORE: NO LINT"); $("phase").textContent = "WAITING";
+  const steps = JSON.parse(py.globals.get("walk")("docs/onboarding.md")); let missing = 0;
+  await add($("tA"), "agent runs onboarding.md, step by step", "d");
+  for (const [n, res] of steps) {
+    if (res) await add($("tA"), `[[skill:${n}]] ${res !== n ? "> " + res + " " : ""}ran`, "y");
+    else { missing++; await add($("tA"), `[[skill:${n}]] not found. Step skipped, no error raised.`, "x"); }
+  }
+  await add($("tA"), `RUN STATUS: <span style="color:var(--ok)">SUCCESS</span> (${missing} of ${steps.length} steps never ran)`, "", 600);
+  failShare = missing ? 1 : 0; const v = read(), silent = cost(v), shown = Math.min(silent, 150);
+  await tape($("tapeA"), shown, "lie", k => { const r = Math.round(k / shown * silent); $("sOk").textContent = r; $("sBad").textContent = r; });
+  $("sOk").textContent = $("sBad").textContent = silent; document.body.dataset.silent = silent;
+  await add($("tA"), `${silent} runs over ${v.weeks} weeks, all reported green.`, "x", 700);
+  setStatus("AFTER: LINT"); $("phase").textContent = "PASS 1"; let g = await draw();
+  for (const p of g.problems) await add($("feed"), "FAIL " + p, "x", 380);
+  $("verdict").textContent = `lint(): ${g.problems.length} problems, playbook blocked`; $("verdict").className = "verdict badc"; await sleep(700);
+  $("phase").textContent = "FIX"; setStatus("FIXING"); $("feed").innerHTML = "";
+  await add($("feed"), "fix: add skills/publish/SKILL.md", "d", 350); py.runPython('(ROOT/"skills/publish").mkdir(parents=True, exist_ok=True); (ROOT/"skills/publish/SKILL.md").write_text("# publish\\nShip it.\\n")');
+  await add($("feed"), "fix: alias old-report > file-report", "d", 350); py.runPython('r = json.loads((ROOT/"registry.json").read_text()); r["aliases"]["old-report"] = "file-report"; (ROOT/"registry.json").write_text(json.dumps(r))');
+  $("phase").textContent = "PASS 2"; setStatus("LINTING"); g = await draw();
+  await add($("feed"), g.problems.length ? `${g.problems.length} problem(s)` : "ok, every reference resolves. Playbook ships.", g.problems.length ? "x" : "y", 300);
+  await tape($("tapeB"), shown, "ok");
+  $("verdict").textContent = g.problems.length ? `lint(): ${g.problems.length} problem(s)` : `Caught before run 1. ${silent} silent failures avoided`; $("verdict").className = "verdict " + (g.problems.length ? "badc" : "okc");
   setStatus("DONE"); $("go").textContent = "Replay"; $("go").disabled = false; document.body.dataset.done = "1";
 }
-$("go").onclick = run; render(); $("go").disabled = false; setStatus("READY"); autoFit(); document.body.dataset.ready = "1";
+$("go").onclick = run; $("go").disabled = false; setStatus("READY"); autoFit(); document.body.dataset.ready = "1";
 </script></body></html>
