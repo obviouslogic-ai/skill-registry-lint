@@ -27,7 +27,7 @@ python3 -m http.server 8000   # from the folder that holds this repo
 # open http://localhost:8000/skill-registry-lint/web/
 ```
 
-The graph shows files, references and skills. Broken links are red and dashed. Add the missing skill, fix the alias, or delete a skill to break things again.
+The page fits one screen. Press **Run the lint**: the reference graph draws in, broken references turn red, two scripted fixes are applied and the lint runs again clean. Press **Replay** to run it again. The explanation sits behind **About this demo** in the corner. Add `?fast=1` to skip the pauses.
 
 The page runs this repo's real Python in the browser through Pyodide, so what you click is the same code the tests cover. Styling comes from `web/kit/`, shared across all five demos.
 
